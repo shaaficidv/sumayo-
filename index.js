@@ -1,5 +1,5 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder, PermissionFlagsBits } = require('discord.js');
-const Canvas = require('canvas');
+const { createCanvas, loadImage } = require('@napi-rs/canvas'); // Waxaan u beddelnay NAPI si uu Railway ugu shaqeeyo
 const QRCode = require('qrcode');
 
 const client = new Client({ 
@@ -22,22 +22,23 @@ client.once('ready', () => {
                 { name: 'button_text', type: 3, description: 'Qoraalka Badanka', required: true }
             ]
         },
-        { name: 'help', description: 'Sida loo isticmaalo bot-ka' }
+        { name: 'help', description: 'Sida loo isticmaalo bot-ka' },
+        { name: 'add', description: 'Ku dar bot-ka server kale' }
     ]);
 });
 
-// --- ID Card Generator ---
+// --- ID Card Generator Function ---
 async function generateIDCard(interaction, data, idCode) {
-    const canvas = Canvas.createCanvas(700, 400);
+    const canvas = createCanvas(700, 400);
     const ctx = canvas.getContext('2d');
 
-    // Background
+    // 1. Background
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Server Logo (O cml)
+    // 2. Server Logo (O cml)
     const guildIcon = interaction.guild.iconURL({ extension: 'png', size: 1024 }) || 'https://cdn.discordapp.com/embed/avatars/0.png';
-    const logo = await Canvas.loadImage(guildIcon);
+    const logo = await loadImage(guildIcon);
     ctx.save();
     ctx.beginPath();
     ctx.arc(620, 70, 50, 0, Math.PI * 2);
@@ -45,11 +46,11 @@ async function generateIDCard(interaction, data, idCode) {
     ctx.drawImage(logo, 570, 20, 100, 100);
     ctx.restore();
 
-    // User Avatar
-    const avatar = await Canvas.loadImage(interaction.user.displayAvatarURL({ extension: 'png' }));
+    // 3. User Avatar
+    const avatar = await loadImage(interaction.user.displayAvatarURL({ extension: 'png' }));
     ctx.drawImage(avatar, 40, 80, 140, 140);
 
-    // Text Info
+    // 4. Info Text
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 30px sans-serif';
     ctx.fillText(interaction.guild.name.toUpperCase(), 210, 60);
@@ -64,31 +65,41 @@ async function generateIDCard(interaction, data, idCode) {
     ctx.font = 'bold 24px sans-serif';
     ctx.fillText(`ID: ${idCode}`, 210, 330);
 
-    // QR Code
+    // 5. QR Code
     const qrBuffer = await QRCode.toDataURL(`https://discord.com/users/${interaction.user.id}`);
-    const qrImage = await Canvas.loadImage(qrBuffer);
+    const qrImage = await loadImage(qrBuffer);
     ctx.drawImage(qrImage, 530, 250, 130, 130);
 
     return canvas.toBuffer();
 }
 
 client.on('interactionCreate', async (interaction) => {
-    if (interaction.commandName === 'verify_setup') {
-        const channel = interaction.options.getChannel('channel');
-        const embed = new EmbedBuilder()
-            .setTitle('Verification System 🛡️')
-            .setDescription(interaction.options.getString('message'))
-            .setColor('Blue');
-
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('start_verify').setLabel(interaction.options.getString('button_text')).setStyle(ButtonStyle.Success)
-        );
-
-        await channel.send({ embeds: [embed], components: [row] });
-        return interaction.reply({ content: '✅ Verification System waa la dhigay.', ephemeral: true });
+    // 1. Slash Command Handling
+    if (interaction.isChatInputCommand()) {
+        if (interaction.commandName === 'verify_setup') {
+            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return;
+            const channel = interaction.options.getChannel('channel');
+            const embed = new EmbedBuilder()
+                .setTitle('Verification System 🛡️')
+                .setDescription(interaction.options.getString('message'))
+                .setColor('Blue');
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('start_verify').setLabel(interaction.options.getString('button_text')).setStyle(ButtonStyle.Success)
+            );
+            await channel.send({ embeds: [embed], components: [row] });
+            return interaction.reply({ content: '✅ Verification System waa la dhigay.', ephemeral: true });
+        }
+        
+        if (interaction.commandName === 'help') {
+            const row = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setLabel('GitHub More..').setURL('https://github.com/shaaficidv/Sumayo-.git').setStyle(ButtonStyle.Link)
+            );
+            await interaction.reply({ content: 'Isticmaal `/verify_setup` si aad u bilowdo.', components: [row] });
+        }
     }
 
-    if (interaction.customId === 'start_verify') {
+    // 2. Button Handling (Open Modal)
+    if (interaction.isButton() && interaction.customId === 'start_verify') {
         const modal = new ModalBuilder().setCustomId('verify_form').setTitle('Verification Form');
         const fields = [
             { id: 'name', label: 'Magacaaga', style: TextInputStyle.Short },
@@ -96,11 +107,11 @@ client.on('interactionCreate', async (interaction) => {
             { id: 'country', label: 'Wadankaaga', style: TextInputStyle.Short },
             { id: 'gender', label: 'Male / Female', style: TextInputStyle.Short }
         ].map(f => new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId(f.id).setLabel(f.label).setStyle(f.style).setRequired(true)));
-
         modal.addComponents(...fields);
         await interaction.showModal(modal);
     }
 
+    // 3. Modal Submission
     if (interaction.isModalSubmit() && interaction.customId === 'verify_form') {
         await interaction.deferReply({ ephemeral: true });
         
@@ -112,26 +123,29 @@ client.on('interactionCreate', async (interaction) => {
         };
         const idCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-        const buffer = await generateIDCard(interaction, data, idCode);
-        const file = new AttachmentBuilder(buffer, { name: 'id-card.png' });
-
-        // DM User
         try {
-            await interaction.user.send({ content: `✅ **Verify Successful!**\nYour Private ID: \`${idCode}\``, files: [file] });
-        } catch (e) { console.log("User DM is closed."); }
+            const buffer = await generateIDCard(interaction, data, idCode);
+            const file = new AttachmentBuilder(buffer, { name: 'sumayo-id-card.png' });
 
-        // Log to Admin Channel
-        const logChName = `verify-logs`;
-        let logCh = interaction.guild.channels.cache.find(c => c.name === logChName);
-        if (!logCh) {
-            logCh = await interaction.guild.channels.create({
-                name: logChName,
-                permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }]
-            });
+            // DM User
+            await interaction.user.send({ content: `✅ **Verify Successful!**\nYour Private ID: \`${idCode}\``, files: [file] }).catch(() => console.log("DM closed"));
+
+            // Log to Admin Channel
+            const logChName = `verify-logs`;
+            let logCh = interaction.guild.channels.cache.find(c => c.name === logChName);
+            if (!logCh) {
+                logCh = await interaction.guild.channels.create({
+                    name: logChName,
+                    permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }]
+                });
+            }
+            await logCh.send({ content: `Verified: ${interaction.user.tag}\nID: ${idCode}`, files: [file] });
+
+            await interaction.editReply({ content: '✅ Macluumaadkaaga waa la gudbiyay, fiiri DM-kaaga.' });
+        } catch (error) {
+            console.error(error);
+            await interaction.editReply({ content: '❌ Cilad ayaa ka dhacday dhismaha ID Card-ka.' });
         }
-        await logCh.send({ content: `Verified: ${interaction.user.tag}\nID: ${idCode}`, files: [file] });
-
-        await interaction.editReply({ content: '✅ Macluumaadkaaga waa la gudbiyay, fiiri DM-kaaga.' });
     }
 });
 
