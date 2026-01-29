@@ -1,5 +1,14 @@
-"dependencies": {
-  "discord.js": "^14.16.3",
-  "canvas": "^2.11.2",
-  "qrcode": "^1.5.3"
+{
+  "name": "sumayo-bot",
+  "version": "1.0.0",
+  "description": "High Level Verification Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "canvas": "^2.11.2",
+    "qrcode": "^1.5.3"
+  }
 }
