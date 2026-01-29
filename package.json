@@ -1,14 +1,5 @@
-{
-  "name": "high-level-bot",
-  "version": "1.0.0",
-  "description": "Professional Discord Bot",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "discord.js": "^14.13.0",
-    "dotenv": "^16.3.1"
-  }
+"dependencies": {
+  "discord.js": "^14.16.3",
+  "canvas": "^2.11.2",
+  "qrcode": "^1.5.3"
 }
-
