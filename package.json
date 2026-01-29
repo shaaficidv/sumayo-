@@ -1,14 +1,5 @@
-{
-  "name": "sumayo-bot",
-  "version": "1.0.0",
-  "description": "High Level Verification Bot",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "discord.js": "^14.16.3",
-    "canvas": "^2.11.2",
-    "qrcode": "^1.5.3"
-  }
+"dependencies": {
+  "discord.js": "^14.16.3",
+  "@napi-rs/canvas": "^0.1.64",
+  "qrcode": "^1.5.3"
 }
