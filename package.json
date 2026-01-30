@@ -1,15 +1,14 @@
 {
-  "name": "sumayo-bot",
+  "name": "discord-id-card-bot",
   "version": "1.0.0",
-  "description": "Verification Bot",
+  "description": "Discord ID Card Verification Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.16.3",
-    "@napi-rs/canvas": "^0.1.64",
-    "qrcode": "^1.5.3"
+    "discord.js": "^14.14.1",
+    "canvas": "^2.11.2",
+    "qrcode": "^1.5.4"
   }
 }
-
