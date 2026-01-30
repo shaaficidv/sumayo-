@@ -1,14 +1,14 @@
 {
   "name": "discord-id-card-bot",
   "version": "1.0.0",
-  "description": "Discord Verify ID Card Bot",
+  "description": "Discord verification bot without canvas",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.15.3",
-    "canvas": "^2.11.2",
-    "qrcode": "^1.5.4"
+    "discord.js": "^14.16.3",
+    "node-fetch": "^3.3.2"
   }
 }
