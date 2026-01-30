@@ -1,9 +1,7 @@
 {
   "name": "discord-id-card-bot",
   "version": "1.0.0",
-  "description": "Discord verification bot without canvas",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
