@@ -1,11 +1,22 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder, PermissionFlagsBits } = require('discord.js');
+const { 
+    Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, 
+    ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, 
+    TextInputStyle, AttachmentBuilder, PermissionFlagsBits 
+} = require('discord.js');
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const QRCode = require('qrcode');
 
 const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ] 
 });
 
+// Settings - Halkaan ku qor ID-ga Role-ka aad rabto in la siiyo qofka
+const VERIFIED_ROLE_ID = "123456789012345678"; // Halkan ku beddel ID-ga rasmiga ah
 const bgUrl = "https://i.postimg.cc/jj2r8Qvy/cd48f1f2f2280a1c08226a5471bbfb96.jpg";
 
 client.once('ready', () => {
@@ -19,7 +30,7 @@ async function generateIDCard(interaction, data, idCode) {
 
     ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-    // Xaqiijinta xogta si looga baxsado 'StringExpected' error
+    // Xallinta ciladda StringExpected
     const name = String(data.name || "N/A");
     const age = String(data.age || "N/A");
     const country = String(data.country || "N/A");
@@ -34,15 +45,13 @@ async function generateIDCard(interaction, data, idCode) {
     ctx.fillText(`Jinsiga: ${gender}`, 80, 600);
     ctx.fillText(`ID: ${idCode}`, 80, 660);
 
-    // Beneficiary name (Magaca Server-ka)
+    // Beneficiary name & Signature
     ctx.font = '30px sans-serif';
     ctx.fillText(guildName, 460, 765); 
-
-    // Management Signature (Magaca Bot-ka)
     ctx.font = 'italic bold 32px sans-serif';
     ctx.fillText("Sumayo- Bot", 100, 935);
 
-    // Profile & Logo
+    // Profile & Logos
     const avatar = await loadImage(interaction.user.displayAvatarURL({ extension: 'png' }));
     ctx.drawImage(avatar, 70, 70, 220, 220);
 
@@ -93,8 +102,15 @@ client.on('interactionCreate', async (interaction) => {
         try {
             const buffer = await generateIDCard(interaction, data, idCode);
             const file = new AttachmentBuilder(buffer, { name: 'id-card.png' });
+
+            // 1. Sii Role-ka Verified ah
+            const role = interaction.guild.roles.cache.get(VERIFIED_ROLE_ID);
+            if (role) await interaction.member.roles.add(role).catch(() => console.log("Role error"));
+
+            // 2. DM u dir
             await interaction.user.send({ content: `✅ Waa kan ID-gaaga!`, files: [file] }).catch(() => {});
-            await interaction.editReply('✅ ID Card-kaagii waa diyaar!');
+
+            await interaction.editReply('✅ ID Card-kaagii waa diyaar, Role-kiina waa lagu siiyay!');
         } catch (error) {
             console.error(error);
             await interaction.editReply('❌ Cilad ayaa dhacday.');
