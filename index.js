@@ -1,135 +1,168 @@
-const {
+import {
   Client,
   GatewayIntentBits,
   SlashCommandBuilder,
+  Routes,
+  REST,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
-  AttachmentBuilder,
-  InteractionType,
-  Events
-} = require("discord.js");
+  Events,
+  InteractionType
+} from "discord.js";
 
-const { createCanvas, loadImage } = require("canvas");
-const QRCode = require("qrcode");
+import Canvas from "canvas";
+import QRCode from "qrcode";
+import fs from "fs";
 
 // ================= CONFIG =================
-const TOKEN = process.env.BOT_TOKEN || "PUT_YOUR_TOKEN_HERE";
-const SERVER_LOGO =
-  "https://i.postimg.cc/jj2r8Qvy/cd48f1f2f2280a1c08226a5471bbfb96.jpg";
-const CARD_BG =
-  "https://i.postimg.cc/pTnVxtj9/ee49ee427eb7fb2217cc5bce7ed191ee.jpg";
-// =========================================
+const CLIENT_ID = "YOUR_CLIENT_ID";
+const GUILD_ID = "YOUR_GUILD_ID";
+// BOT TOKEN HALKAN HA KU QORIN ❌
+// process.env.BOT_TOKEN ayaa la isticmaalayaa
+// ==========================================
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-client.once(Events.ClientReady, async () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-
-  const verifyCmd = new SlashCommandBuilder()
+// ========== SLASH COMMAND ==========
+const commands = [
+  new SlashCommandBuilder()
     .setName("verify")
-    .setDescription("Create your ID Card");
+    .setDescription("Create your ID Card")
+].map(cmd => cmd.toJSON());
 
-  await client.application.commands.create(verifyCmd);
-});
+const rest = new REST({ version: "10" }).setToken(process.env.BOT_TOKEN);
 
-// ================= SLASH COMMAND =================
+(async () => {
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+    console.log("✅ Slash command registered");
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
+// ========== INTERACTIONS ==========
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "verify") {
-      const modal = new ModalBuilder()
-        .setCustomId("verifyModal")
-        .setTitle("User Verification");
+  try {
 
-      const nameInput = new TextInputBuilder()
-        .setCustomId("name")
-        .setLabel("Name")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+    // -------- SLASH COMMAND --------
+    if (interaction.isChatInputCommand()) {
+      if (interaction.commandName === "verify") {
 
-      const ageInput = new TextInputBuilder()
-        .setCustomId("age")
-        .setLabel("Age")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        const modal = new ModalBuilder()
+          .setCustomId("verify_modal")
+          .setTitle("User Verification");
 
-      const countryInput = new TextInputBuilder()
-        .setCustomId("country")
-        .setLabel("Country")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        const nameInput = new TextInputBuilder()
+          .setCustomId("name")
+          .setLabel("Magacaaga")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
 
-      const genderInput = new TextInputBuilder()
-        .setCustomId("gender")
-        .setLabel("Gender")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        const ageInput = new TextInputBuilder()
+          .setCustomId("age")
+          .setLabel("Da'da")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
 
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(nameInput),
-        new ActionRowBuilder().addComponents(ageInput),
-        new ActionRowBuilder().addComponents(countryInput),
-        new ActionRowBuilder().addComponents(genderInput)
-      );
+        const countryInput = new TextInputBuilder()
+          .setCustomId("country")
+          .setLabel("Wadanka")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
 
-      await interaction.showModal(modal);
+        const genderInput = new TextInputBuilder()
+          .setCustomId("gender")
+          .setLabel("Gender")
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true);
+
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(nameInput),
+          new ActionRowBuilder().addComponents(ageInput),
+          new ActionRowBuilder().addComponents(countryInput),
+          new ActionRowBuilder().addComponents(genderInput)
+        );
+
+        await interaction.showModal(modal);
+      }
+    }
+
+    // -------- MODAL SUBMIT --------
+    if (interaction.type === InteractionType.ModalSubmit) {
+      if (interaction.customId === "verify_modal") {
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const name = interaction.fields.getTextInputValue("name");
+        const age = interaction.fields.getTextInputValue("age");
+        const country = interaction.fields.getTextInputValue("country");
+        const gender = interaction.fields.getTextInputValue("gender");
+
+        // ===== CANVAS =====
+        const canvas = Canvas.createCanvas(800, 500);
+        const ctx = canvas.getContext("2d");
+
+        // Background image (link aad siisay)
+        const bg = await Canvas.loadImage(
+          "https://i.postimg.cc/pTnVxtj9/ee49ee427eb7fb2217cc5bce7ed191ee.jpg"
+        );
+        ctx.drawImage(bg, 0, 0, 800, 500);
+
+        ctx.fillStyle = "#00ffff";
+        ctx.font = "28px Sans";
+        ctx.fillText("USER ID CARD", 30, 50);
+
+        ctx.font = "20px Sans";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(`Name: ${name}`, 30, 120);
+        ctx.fillText(`Age: ${age}`, 30, 160);
+        ctx.fillText(`Country: ${country}`, 30, 200);
+        ctx.fillText(`Gender: ${gender}`, 30, 240);
+
+        ctx.fillText(`User: ${interaction.user.tag}`, 30, 300);
+        ctx.fillText(`Server: ${interaction.guild.name}`, 30, 340);
+
+        // ===== QR CODE =====
+        const qrData = `User: ${interaction.user.id}`;
+        const qrImg = await QRCode.toDataURL(qrData);
+        const qr = await Canvas.loadImage(qrImg);
+        ctx.drawImage(qr, 550, 120, 200, 200);
+
+        // Save
+        const buffer = canvas.toBuffer("image/png");
+        fs.writeFileSync("idcard.png", buffer);
+
+        await interaction.editReply({
+          content: "✅ ID Card waa la sameeyay",
+          files: ["idcard.png"]
+        });
+
+        fs.unlinkSync("idcard.png");
+      }
+    }
+
+  } catch (err) {
+    console.error(err);
+    if (!interaction.replied) {
+      await interaction.reply({
+        content: "❌ Error dhacay",
+        ephemeral: true
+      });
     }
   }
-
-  // ================= MODAL SUBMIT =================
-  if (
-    interaction.type === InteractionType.ModalSubmit &&
-    interaction.customId === "verifyModal"
-  ) {
-    await interaction.deferReply({ ephemeral: true });
-
-    const name = interaction.fields.getTextInputValue("name");
-    const age = interaction.fields.getTextInputValue("age");
-    const country = interaction.fields.getTextInputValue("country");
-    const gender = interaction.fields.getTextInputValue("gender");
-
-    // ---------- Canvas ----------
-    const canvas = createCanvas(800, 1100);
-    const ctx = canvas.getContext("2d");
-
-    const bg = await loadImage(CARD_BG);
-    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "#000";
-    ctx.font = "28px Arial";
-
-    ctx.fillText(`Name: ${name}`, 80, 300);
-    ctx.fillText(`Age: ${age}`, 80, 350);
-    ctx.fillText(`Country: ${country}`, 80, 400);
-    ctx.fillText(`Gender: ${gender}`, 80, 450);
-
-    ctx.font = "24px Arial";
-    ctx.fillText(`Bot: ${client.user.username}`, 80, 900);
-
-    // ---------- Server Logo ----------
-    const logo = await loadImage(SERVER_LOGO);
-    ctx.drawImage(logo, 550, 820, 180, 180);
-
-    // ---------- QR Code ----------
-    const qrCanvas = createCanvas(200, 200);
-    await QRCode.toCanvas(
-      qrCanvas,
-      interaction.user.url || `https://discord.com/users/${interaction.user.id}`
-    );
-    ctx.drawImage(qrCanvas, 520, 300, 200, 200);
-
-    const attachment = new AttachmentBuilder(canvas.toBuffer(), {
-      name: "id-card.png"
-    });
-
-    await interaction.editReply({
-      content: "✅ ID Card Created!",
-      files: [attachment]
-    });
-  }
 });
 
-client.login(TOKEN);
+// ========== READY ==========
+client.once(Events.ClientReady, () => {
+  console.log(`🤖 Bot online: ${client.user.tag}`);
+});
+
+client.login(process.env.BOT_TOKEN);
