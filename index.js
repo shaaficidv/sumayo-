@@ -21,83 +21,91 @@ client.once('ready', () => {
     ]);
 });
 
-// Function-ka dhisaya ID Card-ka
+// Function-ka dhisaya ID Card-ka (Safe Strings)
 async function generateIDCard(interaction, data, idCode) {
     const canvas = createCanvas(750, 450);
     const ctx = canvas.getContext('2d');
+
+    // Hubinta in xog kasta ay tahay String si looga baxsado ciladda Rust-ka
+    const name = String(data.name || "N/A");
+    const age = String(data.age || "N/A");
+    const country = String(data.country || "N/A");
+    const gender = String(data.gender || "N/A");
+    const id = String(idCode || "000000");
 
     // 1. Background
     ctx.fillStyle = '#1e1e2e';
     ctx.fillRect(0, 0, 750, 450);
 
-    // 2. Server Logo (Geeska sare)
-    const guildIcon = interaction.guild.iconURL({ extension: 'png' }) || 'https://cdn.discordapp.com/embed/avatars/0.png';
-    const logo = await loadImage(guildIcon);
-    ctx.drawImage(logo, 630, 20, 100, 100);
+    // 2. Server Logo
+    try {
+        const guildIcon = interaction.guild.iconURL({ extension: 'png' }) || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        const logo = await loadImage(guildIcon);
+        ctx.drawImage(logo, 630, 20, 100, 100);
+    } catch (e) { console.log("Logo load error"); }
 
     // 3. User Avatar
-    const avatar = await loadImage(interaction.user.displayAvatarURL({ extension: 'png' }));
-    ctx.drawImage(avatar, 40, 50, 150, 150);
+    try {
+        const avatar = await loadImage(interaction.user.displayAvatarURL({ extension: 'png' }));
+        ctx.drawImage(avatar, 40, 50, 150, 150);
+    } catch (e) { console.log("Avatar load error"); }
 
-    // 4. Qoraalka macluumaadka (Safe String Conversion)
+    // 4. Info Text
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 32px sans-serif';
     ctx.fillText(String(interaction.guild.name).toUpperCase(), 220, 60);
 
     ctx.font = '24px sans-serif';
-    ctx.fillText(`NAME: ${String(data.name)}`, 220, 130);
-    ctx.fillText(`AGE: ${String(data.age)}`, 220, 175);
-    ctx.fillText(`COUNTRY: ${String(data.country)}`, 220, 220);
-    ctx.fillText(`GENDER: ${String(data.gender)}`, 220, 265);
+    ctx.fillText(`NAME: ${name}`, 220, 130);
+    ctx.fillText(`AGE: ${age}`, 220, 175);
+    ctx.fillText(`COUNTRY: ${country}`, 220, 220);
+    ctx.fillText(`GENDER: ${gender}`, 220, 265);
 
-    ctx.fillStyle = '#f1c40f'; // Midab dahabi ah ID-ga
+    ctx.fillStyle = '#f1c40f';
     ctx.font = 'bold 26px sans-serif';
-    ctx.fillText(`PRIVATE ID: ${String(idCode)}`, 220, 330);
+    ctx.fillText(`PRIVATE ID: ${id}`, 220, 330);
 
     // 5. QR Code
-    const qrBuffer = await QRCode.toDataURL(`https://discord.com/users/${interaction.user.id}`);
-    const qrImage = await loadImage(qrBuffer);
-    ctx.drawImage(qrImage, 580, 280, 140, 140);
+    try {
+        const qrBuffer = await QRCode.toDataURL(`https://discord.com/users/${interaction.user.id}`);
+        const qrImage = await loadImage(qrBuffer);
+        ctx.drawImage(qrImage, 580, 280, 140, 140);
+    } catch (e) { console.log("QR error"); }
 
     return canvas.toBuffer();
 }
 
 client.on('interactionCreate', async (interaction) => {
     if (interaction.commandName === 'verify_setup') {
+        if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return;
         const channel = interaction.options.getChannel('channel');
         const embed = new EmbedBuilder()
             .setTitle('🛡️ Server Verification')
             .setDescription(interaction.options.getString('message'))
-            .setColor('Blue')
-            .setFooter({ text: 'Guji badanka hoose si aad is-verify ugu sameyso' });
+            .setColor('Blue');
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('open_verify').setLabel(interaction.options.getString('button_text')).setStyle(ButtonStyle.Success)
         );
 
         await channel.send({ embeds: [embed], components: [row] });
-        return interaction.reply({ content: '✅ Verification System waa la dhigay.', ephemeral: true });
+        return interaction.reply({ content: '✅ Setup Done!', ephemeral: true });
     }
 
     if (interaction.customId === 'open_verify') {
-        const modal = new ModalBuilder().setCustomId('verify_modal_pro').setTitle('Verification Form');
-
-        const nInput = new TextInputBuilder().setCustomId('v_name').setLabel("Full Name").setStyle(TextInputStyle.Short).setRequired(true);
-        const aInput = new TextInputBuilder().setCustomId('v_age').setLabel("Age").setStyle(TextInputStyle.Short).setRequired(true);
-        const cInput = new TextInputBuilder().setCustomId('v_country').setLabel("Country").setStyle(TextInputStyle.Short).setRequired(true);
-        const gInput = new TextInputBuilder().setCustomId('v_gender').setLabel("Gender (Male/Female)").setStyle(TextInputStyle.Short).setRequired(true);
+        const modal = new ModalBuilder().setCustomId('v_modal').setTitle('Verify Form');
 
         modal.addComponents(
-            new ActionRowBuilder().addComponents(nInput),
-            new ActionRowBuilder().addComponents(aInput),
-            new ActionRowBuilder().addComponents(cInput),
-            new ActionRowBuilder().addComponents(gInput)
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_name').setLabel("Full Name").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_age').setLabel("Age").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_country').setLabel("Country").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_gender').setLabel("Gender (Male/Female)").setStyle(TextInputStyle.Short).setRequired(true))
         );
 
         await interaction.showModal(modal);
     }
 
-    if (interaction.isModalSubmit() && interaction.customId === 'verify_modal_pro') {
+    if (interaction.isModalSubmit() && interaction.customId === 'v_modal') {
         await interaction.deferReply({ ephemeral: true });
 
         const data = {
@@ -110,24 +118,19 @@ client.on('interactionCreate', async (interaction) => {
 
         try {
             const buffer = await generateIDCard(interaction, data, idCode);
-            const file = new AttachmentBuilder(buffer, { name: 'sumayo-id.png' });
+            const file = new AttachmentBuilder(buffer, { name: 'id-card.png' });
 
-            // DM User
-            await interaction.user.send({ 
-                content: `✅ **Verification Successful!**\nWaa kan ID Card-kaaga rasmiga ah.`, 
-                files: [file] 
-            }).catch(() => console.log("User DM is closed"));
-
-            // Admin Logs
+            await interaction.user.send({ content: `✅ **Verified!** ID: \`${idCode}\``, files: [file] }).catch(() => {});
+            
             const logCh = interaction.guild.channels.cache.find(c => c.name === 'verify-logs') || 
                           await interaction.guild.channels.create({ name: 'verify-logs', permissionOverwrites: [{ id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] }] });
             
-            await logCh.send({ content: `Verified: ${interaction.user.tag}\nID: ${idCode}`, files: [file] });
+            await logCh.send({ content: `User: ${interaction.user.tag}\nID: ${idCode}`, files: [file] });
 
             await interaction.editReply('✅ Verification dhameystiran! Fiiri DM-kaaga.');
         } catch (error) {
             console.error(error);
-            await interaction.editReply('❌ Cilad ayaa dhacday intii ID-ga la diyaarinayay.');
+            await interaction.editReply('❌ Cilad ayaa dhacday, fadlan mar kale isku day.');
         }
     }
 });
