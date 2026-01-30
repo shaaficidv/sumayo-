@@ -1,6 +1,7 @@
 {
   "name": "sumayo-bot",
   "version": "1.0.0",
+  "description": "Discord Verification Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
