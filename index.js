@@ -1,4 +1,4 @@
-import {
+const {
   Client,
   GatewayIntentBits,
   SlashCommandBuilder,
@@ -7,18 +7,17 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   InteractionType
-} from "discord.js";
+} = require("discord.js");
 
-import fetch from "node-fetch";
+const fetch = require("node-fetch");
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// ⚠️ TOKEN HALKAN HA KU QORIN
 const TOKEN = process.env.BOT_TOKEN;
 
-// 🔹 CUSTOM SETTINGS
+// SETTINGS
 const BOT_NAME = "Cyber Verify Bot";
 const BACKGROUND_IMAGE =
   "https://i.postimg.cc/pTnVxtj9/ee49ee427eb7fb2217cc5bce7ed191ee.jpg";
@@ -33,9 +32,7 @@ client.once("ready", async () => {
   await client.application.commands.create(cmd);
 });
 
-// 🎴 INTERACTIONS
 client.on("interactionCreate", async (interaction) => {
-  // /verify
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "verify") {
       const modal = new ModalBuilder()
@@ -77,7 +74,6 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 
-  // 📥 MODAL SUBMIT
   if (interaction.type === InteractionType.ModalSubmit) {
     if (interaction.customId === "verify_modal") {
       const name = interaction.fields.getTextInputValue("name");
@@ -88,7 +84,6 @@ client.on("interactionCreate", async (interaction) => {
       const user = interaction.user;
       const avatar = user.displayAvatarURL({ extension: "png", size: 256 });
 
-      // 🔗 IMAGE GENERATION (NO CANVAS)
       const imageURL = `https://image.pollinations.ai/prompt/
 Discord ID Card,
 Background image ${BACKGROUND_IMAGE},
@@ -104,7 +99,6 @@ high quality
 `;
 
       await interaction.reply({
-        content: "✅ Your ID Card is ready",
         embeds: [
           {
             title: "🪪 Verification ID",
