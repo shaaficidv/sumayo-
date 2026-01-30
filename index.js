@@ -1,155 +1,81 @@
-require("dotenv").config();
-const {
-  Client,
-  GatewayIntentBits,
-  SlashCommandBuilder,
-  Routes,
-  REST,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  ActionRowBuilder,
-  AttachmentBuilder
-} = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } = require('discord.js');
+const { createCanvas, loadImage } = require('@napi-rs/canvas'); // LINE-KAN WAA MUHIIM
+const QRCode = require('qrcode');
 
-const { createCanvas, loadImage } = require("@napi-rs/canvas");
-const QRCode = require("qrcode");
-
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+const client = new Client({ 
+    intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
+    ] 
 });
 
-/* ================= REGISTER SLASH COMMAND ================= */
-const commands = [
-  new SlashCommandBuilder()
-    .setName("verify")
-    .setDescription("Create your ID card")
-].map(cmd => cmd.toJSON());
+// Link-ga template-kaaga
+const bgUrl = "https://i.postimg.cc/jj2r8Qvy/cd48f1f2f2280a1c08226a5471bbfb96.jpg";
 
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
-
-(async () => {
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
-      ),
-      { body: commands }
-    );
-    console.log("✅ Slash command registered");
-  } catch (e) {
-    console.error(e);
-  }
-})();
-
-/* ================= BOT READY ================= */
-client.once("ready", () => {
-  console.log(`🤖 Logged in as ${client.user.tag}`);
+client.once('ready', () => {
+    console.log(`✅ Sumayo- Pro is Online!`);
 });
 
-/* ================= INTERACTION HANDLER ================= */
-client.on("interactionCreate", async interaction => {
-
-  /* ---- Slash Command ---- */
-  if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "verify") {
-
-      const modal = new ModalBuilder()
-        .setCustomId("verify_modal")
-        .setTitle("ID Verification");
-
-      const name = new TextInputBuilder()
-        .setCustomId("name")
-        .setLabel("Your Name")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const age = new TextInputBuilder()
-        .setCustomId("age")
-        .setLabel("Age")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const country = new TextInputBuilder()
-        .setCustomId("country")
-        .setLabel("Country")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const gender = new TextInputBuilder()
-        .setCustomId("gender")
-        .setLabel("Gender")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(name),
-        new ActionRowBuilder().addComponents(age),
-        new ActionRowBuilder().addComponents(country),
-        new ActionRowBuilder().addComponents(gender)
-      );
-
-      await interaction.showModal(modal);
+client.on('interactionCreate', async (interaction) => {
+    // 1. /verify_setup Command
+    if (interaction.isChatInputCommand() && interaction.commandName === 'verify_setup') {
+        const embed = new EmbedBuilder()
+            .setTitle('🛡️ Server Verification')
+            .setDescription('Guji badanka hoose si aad is-verify ugu sameyso.')
+            .setColor('#D4AF37');
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('open_v').setLabel('hdk').setStyle(ButtonStyle.Success)
+        );
+        await interaction.reply({ embeds: [embed], components: [row] });
     }
-  }
 
-  /* ---- Modal Submit ---- */
-  if (interaction.isModalSubmit()) {
-    if (interaction.customId === "verify_modal") {
-
-      await interaction.deferReply({ ephemeral: true });
-
-      const name = interaction.fields.getTextInputValue("name");
-      const age = interaction.fields.getTextInputValue("age");
-      const country = interaction.fields.getTextInputValue("country");
-      const gender = interaction.fields.getTextInputValue("gender");
-
-      /* ===== CREATE CANVAS ===== */
-      const canvas = createCanvas(900, 500);
-      const ctx = canvas.getContext("2d");
-
-      // Background
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Neon border
-      ctx.strokeStyle = "#22d3ee";
-      ctx.lineWidth = 6;
-      ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-
-      // Logo
-      const logo = await loadImage(
-        "https://i.postimg.cc/jj2r8Qvy/cd48f1f2f2280a1c08226a5471bbfb96.jpg"
-      );
-      ctx.drawImage(logo, 40, 40, 120, 120);
-
-      // Text
-      ctx.fillStyle = "#e5e7eb";
-      ctx.font = "bold 32px Sans";
-      ctx.fillText("USER ID CARD", 220, 70);
-
-      ctx.font = "22px Sans";
-      ctx.fillText(`Name: ${name}`, 220, 140);
-      ctx.fillText(`Age: ${age}`, 220, 180);
-      ctx.fillText(`Country: ${country}`, 220, 220);
-      ctx.fillText(`Gender: ${gender}`, 220, 260);
-
-      // QR Code
-      const qr = await QRCode.toDataURL(interaction.user.id);
-      const qrImg = await loadImage(qr);
-      ctx.drawImage(qrImg, 680, 120, 160, 160);
-
-      const buffer = canvas.toBuffer("image/png");
-      const attachment = new AttachmentBuilder(buffer, { name: "id-card.png" });
-
-      await interaction.editReply({
-        content: "✅ Your ID Card is ready",
-        files: [attachment]
-      });
+    // 2. Button Click
+    if (interaction.isButton() && interaction.customId === 'open_v') {
+        const modal = new ModalBuilder().setCustomId('v_modal').setTitle('ID Card Form');
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_name').setLabel("Full Name").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_age').setLabel("Age").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_country').setLabel("Country").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_gender').setLabel("Gender").setStyle(TextInputStyle.Short).setRequired(true))
+        );
+        await interaction.showModal(modal);
     }
-  }
+
+    // 3. Modal Submit
+    if (interaction.isModalSubmit() && interaction.customId === 'v_modal') {
+        await interaction.deferReply({ ephemeral: true });
+        
+        const name = String(interaction.fields.getTextInputValue('v_name')); // String conversion
+        const age = String(interaction.fields.getTextInputValue('v_age'));
+        const country = String(interaction.fields.getTextInputValue('v_country'));
+        const gender = String(interaction.fields.getTextInputValue('v_gender'));
+        const idCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        try {
+            const background = await loadImage(bgUrl);
+            const canvas = createCanvas(background.width, background.height);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
+
+            // Qoraalka ID-ga
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 34px sans-serif';
+            ctx.fillText(`Magaca: ${name}`, 80, 420);
+            ctx.fillText(`Da'da: ${age}`, 80, 480);
+            ctx.fillText(`ID: ${idCode}`, 80, 660);
+
+            const buffer = canvas.toBuffer('image/png');
+            const file = new AttachmentBuilder(buffer, { name: 'id-card.png' });
+
+            await interaction.user.send({ content: `✅ Waa kan ID-gaaga!`, files: [file] }).catch(() => {});
+            await interaction.editReply('✅ ID Card-kaagii waa diyaar!');
+        } catch (error) {
+            console.error(error);
+            await interaction.editReply('❌ Cilad ayaa dhacday.');
+        }
+    }
 });
 
-/* ================= LOGIN ================= */
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.TOKEN);
