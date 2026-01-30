@@ -1,12 +1,13 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder } = require('discord.js');
-const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const QRCode = require('qrcode');
 
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers] 
 });
 
-const bgUrl = "https://i.postimg.cc/jj2r8Qvy/cd48f1f2f2280a1c08226a5471bbfb96.jpg";
+// Link-ga sawirkaaga cusub
+const bgUrl = "https://i.postimg.cc/pTnVxtj9/ee49ee427eb7fb2217cc5bce7ed191ee.jpg";
 
 client.once('ready', () => {
     console.log(`✅ Sumayo- Pro is Online!`);
@@ -20,38 +21,37 @@ async function generateIDCard(interaction, data, idCode) {
     // 1. Sawir Background-ka
     ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-    // 2. Habaynta Qoraalka (Color & Size)
-    ctx.fillStyle = '#000000'; // Hubi inuu madow yahay
+    // 2. Habaynta Qoraalka (Font-ka weyneey si uu u muuqdo)
+    ctx.fillStyle = '#000000'; 
     
-    // 3. Qorista Macluumaadka (Isticmaal font caadi ah)
-    ctx.font = 'bold 40px Arial'; 
-    ctx.fillText(`Magaca: ${String(data.name)}`, 80, 420);
-    ctx.fillText(`Da'da: ${String(data.age)}`, 80, 485);
-    ctx.fillText(`Wadanka: ${String(data.country)}`, 80, 550);
-    ctx.fillText(`Jinsiga: ${String(data.gender)}`, 80, 615);
-    ctx.fillText(`ID: ${idCode}`, 80, 680);
+    // Server Name (Dusha sare dhexda)
+    ctx.font = 'bold 60px sans-serif';
+    ctx.fillText(interaction.guild.name, canvas.width / 2 - 150, 150);
 
-    // 4. Magaca Server-ka (Khadka Beneficiary name)
-    ctx.font = 'bold 32px Arial';
-    ctx.fillText(String(interaction.guild.name).toUpperCase(), 450, 765); 
+    // Macluumaadka User-ka (Bidixda)
+    ctx.font = 'bold 45px sans-serif';
+    ctx.fillText(`Name: ${data.name}`, 150, 350);
+    ctx.fillText(`Age: ${data.age}`, 150, 430);
+    ctx.fillText(`Country: ${data.country}`, 150, 510);
+    ctx.fillText(`Gender: ${data.gender}`, 150, 590);
 
-    // 5. Saxiixa Bot-ka (Khadka Signature)
-    ctx.font = 'italic bold 32px Arial';
-    ctx.fillText("Sumayo- Pro Bot", 120, 940);
-
-    // 6. User Avatar (Sawirka qofka)
+    // 3. User Avatar (Meesha "avater;" ku qoran tahay)
     const avatar = await loadImage(interaction.user.displayAvatarURL({ extension: 'png', size: 512 }));
-    ctx.drawImage(avatar, 65, 65, 235, 235);
+    ctx.drawImage(avatar, 150, 180, 180, 180);
 
-    // 7. Server Logo (Logo-ga Server-ka)
+    // 4. Server Logo (Bidix hoose)
     const guildIcon = interaction.guild.iconURL({ extension: 'png' }) || 'https://cdn.discordapp.com/embed/avatars/0.png';
     const logo = await loadImage(guildIcon);
-    ctx.drawImage(logo, 820, 65, 180, 180);
+    ctx.drawImage(logo, 120, 780, 150, 150);
 
-    // 8. QR Code 
-    const qrBuffer = await QRCode.toBuffer(`User: ${interaction.user.tag} | ID: ${idCode}`);
+    // 5. QR Code (Midigta dhexda)
+    const qrBuffer = await QRCode.toBuffer(`User: ${interaction.user.id}`);
     const qrImage = await loadImage(qrBuffer);
-    ctx.drawImage(qrImage, 790, 790, 220, 220);
+    ctx.drawImage(qrImage, 650, 350, 250, 250);
+
+    // 6. Magaca Bot-ka (Midig hoose)
+    ctx.font = 'bold 35px sans-serif';
+    ctx.fillText("Sumayo- Pro", 650, 800);
 
     return canvas.toBuffer('image/png');
 }
@@ -69,12 +69,12 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isButton() && interaction.customId === 'open_v') {
-        const modal = new ModalBuilder().setCustomId('v_modal').setTitle('ID Card Form');
+        const modal = new ModalBuilder().setCustomId('v_modal').setTitle('Verification Form');
         modal.addComponents(
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_name').setLabel("Full Name").setStyle(TextInputStyle.Short).setRequired(true)),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_age').setLabel("Age").setStyle(TextInputStyle.Short).setRequired(true)),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_country').setLabel("Country").setStyle(TextInputStyle.Short).setRequired(true)),
-            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_gender').setLabel("Gender").setStyle(TextInputStyle.Short).setRequired(true))
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_name').setLabel("Magaca").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_age').setLabel("Da'da").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_country').setLabel("Wadanka").setStyle(TextInputStyle.Short).setRequired(true)),
+            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('v_gender').setLabel("Jinsiga").setStyle(TextInputStyle.Short).setRequired(true))
         );
         await interaction.showModal(modal);
     }
@@ -91,11 +91,11 @@ client.on('interactionCreate', async (interaction) => {
 
         try {
             const buffer = await generateIDCard(interaction, data, idCode);
-            const file = new AttachmentBuilder(buffer, { name: 'sumayo-id.png' });
-            await interaction.user.send({ content: `✅ Waa kan ID-gaaga dhammaystiran!`, files: [file] }).catch(() => {});
-            await interaction.editReply('✅ ID-gaagii waa diyaar!');
+            const file = new AttachmentBuilder(buffer, { name: 'id-card.png' });
+            await interaction.user.send({ content: `✅ Waa kan ID-gaagii!`, files: [file] }).catch(() => {});
+            await interaction.editReply('✅ Fiiri DM-kaaga, ID-gii waa loo soo diray!');
         } catch (error) {
-            console.error("Canvas Error:", error);
+            console.error(error);
             await interaction.editReply('❌ Cilad ayaa dhacday.');
         }
     }
