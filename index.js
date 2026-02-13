@@ -1,118 +1,39 @@
-const {
-  Client,
-  GatewayIntentBits,
-  SlashCommandBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  ActionRowBuilder,
-  InteractionType
-} = require("discord.js");
+const { Client, GatewayIntentBits } = require('discord.js');
+const express = require('express');
 
-const fetch = require("node-fetch");
+// 1. Samee website yar si Koyeb uusan u damin bot-ka
+const app = express();
+app.get('/', (req, res) => res.send('Bot-ka waa nool yahay!'));
+app.listen(process.env.PORT || 3000);
 
+// 2. Setup-ka Bot-ka
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
-const TOKEN = process.env.BOT_TOKEN;
-
-// SETTINGS
-const BOT_NAME = "Cyber Verify Bot";
-const BACKGROUND_IMAGE =
-  "https://i.postimg.cc/pTnVxtj9/ee49ee427eb7fb2217cc5bce7ed191ee.jpg";
-
-client.once("ready", async () => {
-  console.log(`✅ ${client.user.tag} online`);
-
-  const cmd = new SlashCommandBuilder()
-    .setName("verify")
-    .setDescription("Create your ID card");
-
-  await client.application.commands.create(cmd);
+client.once('ready', () => {
+  console.log(`Bot-ka ${client.user.tag} waa diyaar!`);
 });
 
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "verify") {
-      const modal = new ModalBuilder()
-        .setCustomId("verify_modal")
-        .setTitle("Verification Form");
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
 
-      const name = new TextInputBuilder()
-        .setCustomId("name")
-        .setLabel("Your Name")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const age = new TextInputBuilder()
-        .setCustomId("age")
-        .setLabel("Your Age")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const country = new TextInputBuilder()
-        .setCustomId("country")
-        .setLabel("Country")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      const gender = new TextInputBuilder()
-        .setCustomId("gender")
-        .setLabel("Gender")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true);
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(name),
-        new ActionRowBuilder().addComponents(age),
-        new ActionRowBuilder().addComponents(country),
-        new ActionRowBuilder().addComponents(gender)
-      );
-
-      await interaction.showModal(modal);
-    }
-  }
-
-  if (interaction.type === InteractionType.ModalSubmit) {
-    if (interaction.customId === "verify_modal") {
-      const name = interaction.fields.getTextInputValue("name");
-      const age = interaction.fields.getTextInputValue("age");
-      const country = interaction.fields.getTextInputValue("country");
-      const gender = interaction.fields.getTextInputValue("gender");
-
-      const user = interaction.user;
-      const avatar = user.displayAvatarURL({ extension: "png", size: 256 });
-
-      const imageURL = `https://image.pollinations.ai/prompt/
-Discord ID Card,
-Background image ${BACKGROUND_IMAGE},
-Name ${name},
-Age ${age},
-Country ${country},
-Gender ${gender},
-Bot ${BOT_NAME},
-Server logo ${avatar},
-QR code for https://discord.com/users/${user.id},
-cyberpunk neon style,
-high quality
-`;
-
-      await interaction.reply({
-        embeds: [
-          {
-            title: "🪪 Verification ID",
-            description: `Issued by **${BOT_NAME}**`,
-            image: { url: imageURL },
-            footer: {
-              text: interaction.guild.name,
-              icon_url: interaction.guild.iconURL()
-            }
-          }
-        ]
+  // Haddii fariintu link leedahay, tirtir
+  const linkRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+  if (linkRegex.test(message.content)) {
+    try {
+      await message.delete();
+      message.channel.send(`Hey ${message.author}, halkan linki loo ma ogola!`).then(msg => {
+        setTimeout(() => msg.delete(), 5000);
       });
+    } catch (err) {
+      console.log("Error tirtirista: ", err);
     }
   }
 });
 
-client.login(TOKEN);
+client.login(process.env.DISCORD_TOKEN);
